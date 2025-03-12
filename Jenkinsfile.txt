@@ -1,0 +1,38 @@
+pipeline {
+    agent any
+    environment {
+        DOCKER_IMAGE = 'nodejs-app'
+        REGISTRY = 'docker.io'
+        DOCKER_CREDS = credentials('docker-credentials') // Add Docker credentials in Jenkins
+    }
+    stages {
+        stage('Clone') {
+            steps {
+                git branch: 'main', url: 'https://github.com/yourusername/nodejs-app.git'
+            }
+        }
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    docker.build(DOCKER_IMAGE)
+                }
+            }
+        }
+        stage('Push Docker Image') {
+            steps {
+                script {
+                    docker.withRegistry("https://${REGISTRY}", DOCKER_CREDS) {
+                        docker.image(DOCKER_IMAGE).push('latest')
+                    }
+                }
+            }
+        }
+        stage('Deploy to Kubernetes') {
+            steps {
+                script {
+                    sh 'kubectl apply -f k8s/deployment.yaml'
+                }
+            }
+        }
+    }
+}
